@@ -1,11 +1,12 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Form, Button } from 'react-bootstrap';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, updateProfile } from "firebase/auth";
 import app from './firebase.init';
 function App() {
   const [registered, setRegistered] = useState(false);
   const [user, setUser] = useState('');
+  const [name, setName] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const auth = getAuth(app);
   const [email, setEmail] = useState('');
@@ -19,6 +20,10 @@ function App() {
     const password = event.target.value;
     setPassword(password);
     console.log(password);
+  }
+  const handleNameBlur = (event) =>{
+    setName(event.target.value);
+
   }
   const handleFormSubmit = (event) => {
     if (registered) {
@@ -46,6 +51,8 @@ function App() {
           setUser(user)
           setEmail('')
           setPassword('')
+          veryfyEmail();
+          setUserName();
         })
         .catch((error) => {
           const errorCode = error.code;
@@ -58,12 +65,51 @@ function App() {
   };
   const handleRegisteredChanged = event => {
     setRegistered(event.target.checked);
+  };
+  const veryfyEmail = () => {
+    sendEmailVerification(auth.currentUser)
+      .then(() => {
+        // Email verification sent!
+        // ...
+        console.log('Email Verification sent');
+      });
+  };
+  const handlePasswordReset = () => {
+    const auth = getAuth();
+    sendPasswordResetEmail(auth, email)
+      .then(() => {
+        // Password reset email sent!
+        // ..
+        console.log("Email Sent");
+      })
+      .catch((error) => {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        // ..
+      });
+  };
+  const setUserName = ()=>{
+    updateProfile(auth.currentUser, {
+      displayName: name
+    }).then(() => {
+      // Profile updated!
+      console.log('updated name');
+    }).catch((error) => {
+      // An error occurred
+      
+    });
   }
   return (
     <div className="App">
       <div className='w-50 mx-auto mt-5'>
         <h1 className='text-primary'>{registered ? 'Login' : 'Please Register'}</h1>
         <Form onSubmit={handleFormSubmit}>
+          { !registered &&
+            <Form.Group className="mb-3" controlId="formBasicName">
+            <Form.Label>User Name</Form.Label>
+            <Form.Control onBlur={handleNameBlur} type="text" placeholder="Enter name" required />
+          </Form.Group>
+          }
           <Form.Group className="mb-3" controlId="formBasicEmail">
             <Form.Label>Email address</Form.Label>
             <Form.Control onBlur={handleEmailBlur} type="email" placeholder="Enter email" required />
@@ -81,8 +127,9 @@ function App() {
           <Button variant="primary" type="submit">
             {registered ? 'Login' : 'Register'}
           </Button>
+          <Button onClick={handlePasswordReset} variant="link">Forget Password?</Button>
         </Form>
-        {errorMessage}
+        <p className='text-danger'>{errorMessage}</p>
       </div>
     </div>
   );
